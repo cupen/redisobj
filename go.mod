@@ -3,7 +3,8 @@ module github.com/cupen/redisobj
 go 1.14
 
 require (
-	github.com/ApeCrafts/components v0.6.4
-	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/go-redis/redis/v8 v8.11.5
+	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/stretchr/testify v1.7.0
 )

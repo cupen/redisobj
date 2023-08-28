@@ -1,10 +1,11 @@
 package redisobj
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type HashSet core
@@ -17,16 +18,19 @@ func NewHashSet(redis *redis.Client, key string) HashSet {
 }
 
 func (this *HashSet) Set(key string, s string) error {
-	_, err := this.redis.HSet(this.key, key, s).Result()
+	c := context.TODO()
+	_, err := this.redis.HSet(c, this.key, key, s).Result()
 	return err
 }
 
 func (this *HashSet) Get(key string) (string, error) {
-	return this.redis.HGet(this.key, key).Result()
+	c := context.TODO()
+	return this.redis.HGet(c, this.key, key).Result()
 }
 
 func (this *HashSet) Del(field string) error {
-	_, err := this.redis.HDel(this.key, field).Result()
+	c := context.TODO()
+	_, err := this.redis.HDel(c, this.key, field).Result()
 	return err
 }
 
@@ -35,12 +39,14 @@ func (this *HashSet) SetObject(key string, obj interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = this.redis.HSet(this.key, key, string(data)).Result()
+	c := context.TODO()
+	_, err = this.redis.HSet(c, this.key, key, string(data)).Result()
 	return err
 }
 
 func (this *HashSet) GetObject(key string, obj interface{}) error {
-	data, err := this.redis.HGet(this.key, key).Result()
+	c := context.TODO()
+	data, err := this.redis.HGet(c, this.key, key).Result()
 	if err != nil {
 		return err
 	}
@@ -48,7 +54,8 @@ func (this *HashSet) GetObject(key string, obj interface{}) error {
 }
 
 func (this *HashSet) SetTTL(ttl time.Duration) {
-	this.redis.Expire(this.key, ttl)
+	c := context.TODO()
+	this.redis.Expire(c, this.key, ttl)
 }
 
 func (this *HashSet) GetKey() string {

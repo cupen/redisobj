@@ -1,9 +1,10 @@
 package redisobj
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type CountorWithSet struct {
@@ -30,13 +31,14 @@ func (this *CountorWithSet) WithTTL(ttl time.Duration, do func(c *CountorWithSet
 }
 
 func (this *CountorWithSet) Inc(elems ...interface{}) error {
-	_, err := this.redis.SAdd(this.key, elems...).Result()
+	c := context.TODO()
+	_, err := this.redis.SAdd(c, this.key, elems...).Result()
 	if err != nil {
 		return err
 	}
 	// log.Printf("key:%s inc:%#v", this.key, elems)
 	return nil
-	// size, err := this.redis.SCard(this.key).Result()
+	// size, err := this.redis.SCard(c, this.key).Result()
 	// if err != nil {
 	// 	if err != redis.Nil {
 	// 		return 0, err
@@ -46,7 +48,8 @@ func (this *CountorWithSet) Inc(elems ...interface{}) error {
 }
 
 func (this *CountorWithSet) Dec(elems ...interface{}) error {
-	_, err := this.redis.SRem(this.key, elems...).Result()
+	c := context.TODO()
+	_, err := this.redis.SRem(c, this.key, elems...).Result()
 	if err != nil {
 		if err == redis.Nil {
 			err = nil
@@ -54,7 +57,7 @@ func (this *CountorWithSet) Dec(elems ...interface{}) error {
 		return err
 	}
 	// log.Printf("key:%s dec:%#v", this.key, elems)
-	// size, err := this.redis.SCard(this.key).Result()
+	// size, err := this.redis.SCard(c, this.key).Result()
 	// if err != nil {
 	// 	if err != redis.Nil {
 	// 		return 0, err
@@ -68,20 +71,23 @@ func (this *CountorWithSet) Get() (int, error) {
 }
 
 func (this *CountorWithSet) Reset() error {
-	_, err := this.redis.Unlink(this.key).Result()
+	c := context.TODO()
+	_, err := this.redis.Unlink(c, this.key).Result()
 	return err
 }
 
 func (this *CountorWithSet) SetTTL(ttl time.Duration) {
-	this.redis.Expire(this.key, ttl)
+	c := context.TODO()
+	this.redis.Expire(c, this.key, ttl)
 }
 
 // func (this *CountorWithSet) SetTTLAt(expiredAt time.Time) error {
-// 	return this.redis.ExpireAt(this.key, expiredAt).Err()
+// 	return this.redis.ExpireAt(c, this.key, expiredAt).Err()
 // }
 
 func (this *CountorWithSet) Size() (int, error) {
-	size, err := this.redis.SCard(this.key).Result()
+	c := context.TODO()
+	size, err := this.redis.SCard(c, this.key).Result()
 	if err != nil && err != redis.Nil {
 		return 0, err
 	}

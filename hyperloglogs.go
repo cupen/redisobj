@@ -1,9 +1,10 @@
 package redisobj
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type HyperLogLogs struct {
@@ -19,17 +20,20 @@ func NewHyperLogLogs(redis *redis.Client, key string) HyperLogLogs {
 }
 
 func (this HyperLogLogs) Add(elems ...interface{}) {
-	this.redis.PFAdd(this.key, elems...)
+	c := context.TODO()
+	this.redis.PFAdd(c, this.key, elems...)
 }
 
 func (this HyperLogLogs) Count() (int64, error) {
-	c, err := this.redis.PFCount(this.key).Result()
+	c := context.TODO()
+	count, err := this.redis.PFCount(c, this.key).Result()
 	if err == redis.Nil {
 		err = nil
 	}
-	return c, err
+	return count, err
 }
 
 func (this HyperLogLogs) SetTTL(ttl time.Duration) (bool, error) {
-	return this.redis.Expire(this.key, ttl).Result()
+	c := context.TODO()
+	return this.redis.Expire(c, this.key, ttl).Result()
 }

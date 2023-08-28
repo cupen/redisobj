@@ -1,10 +1,11 @@
 package redisobj
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -45,8 +46,9 @@ func (this *ZSet) GetOrdering() int {
 }
 
 func (this *ZSet) Add(member interface{}, score int64) error {
+	c := context.TODO()
 	elem := redis.Z{Member: member, Score: float64(score)}
-	_, err := this.redis.ZAdd(this.key, elem).Result()
+	_, err := this.redis.ZAdd(c, this.key, &elem).Result()
 	if err != nil {
 		return err
 	}
@@ -56,8 +58,9 @@ func (this *ZSet) Add(member interface{}, score int64) error {
 	return nil
 }
 
-func (this *ZSet) AddBatch(elems ...redis.Z) bool {
-	countAdded, err := this.redis.ZAdd(this.key, elems...).Result()
+func (this *ZSet) AddBatch(elems ...*redis.Z) bool {
+	c := context.TODO()
+	countAdded, err := this.redis.ZAdd(c, this.key, elems...).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -68,7 +71,8 @@ func (this *ZSet) AddBatch(elems ...redis.Z) bool {
 }
 
 func (this *ZSet) Del(member string) error {
-	_, err := this.redis.ZRem(this.key, member).Result()
+	c := context.TODO()
+	_, err := this.redis.ZRem(c, this.key, member).Result()
 	if err == redis.Nil {
 		err = nil
 	}
@@ -76,7 +80,8 @@ func (this *ZSet) Del(member string) error {
 }
 
 func (this *ZSet) Has(elem string) bool {
-	_, err := this.redis.ZScore(this.key, elem).Result()
+	c := context.TODO()
+	_, err := this.redis.ZScore(c, this.key, elem).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return false
@@ -87,7 +92,8 @@ func (this *ZSet) Has(elem string) bool {
 }
 
 func (this *ZSet) Size() (int, error) {
-	size, err := this.redis.ZCard(this.key).Result()
+	c := context.TODO()
+	size, err := this.redis.ZCard(c, this.key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return 0, nil
@@ -98,16 +104,18 @@ func (this *ZSet) Size() (int, error) {
 }
 
 func (this *ZSet) Clear() error {
-	_, err := this.redis.Del(this.key).Result()
+	c := context.TODO()
+	_, err := this.redis.Del(c, this.key).Result()
 	return err
 }
 
 func (this *ZSet) GetListByOrder(start int, end int, ordering int) ([]redis.Z, error) {
+	c := context.TODO()
 	if ordering == OrderingDesc {
-		list, err := this.redis.ZRevRangeWithScores(this.key, int64(start), int64(end)).Result()
+		list, err := this.redis.ZRevRangeWithScores(c, this.key, int64(start), int64(end)).Result()
 		return list, err
 	}
-	list, err := this.redis.ZRangeWithScores(this.key, int64(start), int64(end)).Result()
+	list, err := this.redis.ZRangeWithScores(c, this.key, int64(start), int64(end)).Result()
 	return list, err
 }
 
@@ -124,7 +132,8 @@ func (this *ZSet) GetList(start int, count int) ([]redis.Z, error) {
 
 func (this *ZSet) GetScore(member string) (int64, error) {
 	key := this.key
-	score, err := this.redis.ZScore(key, member).Result()
+	c := context.TODO()
+	score, err := this.redis.ZScore(c, key, member).Result()
 	if err == redis.Nil {
 		return 0, nil
 	}
@@ -144,11 +153,14 @@ func (this *ZSet) GetTop(count int) ([]redis.Z, error) {
 }
 
 func (this *ZSet) SetTTL(ttl time.Duration) error {
-	return this.redis.Expire(this.key, ttl).Err()
+	c := context.TODO()
+	return this.redis.Expire(c, this.key, ttl).Err()
 }
 
 func (this *ZSet) Exists() (bool, error) {
-	flag, err := this.redis.Exists(this.key).Result()
+	c := context.TODO()
+
+	flag, err := this.redis.Exists(c, this.key).Result()
 	return flag > 0, err
 }
 
@@ -173,8 +185,9 @@ func (this *ZSet) DelByRanking(ranking int, count int) (int64, error) {
 	}
 	key := this.key
 	rds := this.redis
+	c := context.TODO()
 	// log.Printf("key=%s start=%d end=%d\n", key, start, end)
-	delCount, err := rds.ZRemRangeByRank(key, start, end).Result()
+	delCount, err := rds.ZRemRangeByRank(c, key, start, end).Result()
 	if err == redis.Nil {
 		err = nil
 	}

@@ -1,9 +1,10 @@
 package redisobj
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 // 需配合 grace.Recover 一起用
@@ -24,7 +25,8 @@ func NewSet(c *redis.Client, key string) Set {
 // }
 
 func (this *Set) Add(elems ...interface{}) bool {
-	countAdded, err := this.redis.SAdd(this.key, elems...).Result()
+	c := context.TODO()
+	countAdded, err := this.redis.SAdd(c, this.key, elems...).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +34,8 @@ func (this *Set) Add(elems ...interface{}) bool {
 }
 
 func (this *Set) Del(elems ...interface{}) bool {
-	countDeleted, err := this.redis.SRem(this.key, elems...).Result()
+	c := context.TODO()
+	countDeleted, err := this.redis.SRem(c, this.key, elems...).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return false
@@ -43,7 +46,8 @@ func (this *Set) Del(elems ...interface{}) bool {
 }
 
 func (this *Set) Has(elem string) bool {
-	ok, err := this.redis.SIsMember(this.key, elem).Result()
+	c := context.TODO()
+	ok, err := this.redis.SIsMember(c, this.key, elem).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return false
@@ -54,7 +58,8 @@ func (this *Set) Has(elem string) bool {
 }
 
 func (this *Set) ToList() ([]string, error) {
-	rs, err := this.redis.SMembers(this.key).Result()
+	c := context.TODO()
+	rs, err := this.redis.SMembers(c, this.key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, nil
@@ -65,7 +70,8 @@ func (this *Set) ToList() ([]string, error) {
 }
 
 func (this *Set) Size() int {
-	size, err := this.redis.SCard(this.key).Result()
+	c := context.TODO()
+	size, err := this.redis.SCard(c, this.key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return 0
@@ -76,21 +82,25 @@ func (this *Set) Size() int {
 }
 
 func (this *Set) Reset(elems []string) error {
-	_, _ = this.redis.Del(this.key).Result()
-	_, err := this.redis.SAdd(this.key, elems).Result()
+	c := context.TODO()
+	_, _ = this.redis.Del(c, this.key).Result()
+	_, err := this.redis.SAdd(c, this.key, elems).Result()
 	return err
 }
 
 func (this *Set) Clear() error {
-	_, err := this.redis.Del(this.key).Result()
+	c := context.TODO()
+	_, err := this.redis.Del(c, this.key).Result()
 	return err
 }
 
 func (this *Set) SetTTL(ttl time.Duration) error {
-	_, err := this.redis.Expire(this.key, ttl).Result()
+	c := context.TODO()
+	_, err := this.redis.Expire(c, this.key, ttl).Result()
 	return err
 }
 
 func (this *Set) SetTTLAt(expiredAt time.Time) error {
-	return this.redis.ExpireAt(this.key, expiredAt).Err()
+	c := context.TODO()
+	return this.redis.ExpireAt(c, this.key, expiredAt).Err()
 }

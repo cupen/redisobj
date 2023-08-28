@@ -1,9 +1,10 @@
 package redisobj
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type core struct {
@@ -16,9 +17,11 @@ func (this *core) GetKey() string {
 }
 
 func (this *core) SetTTL(ttl time.Duration) error {
-	return this.redis.Expire(this.key, ttl).Err()
+	c := context.TODO()
+	return this.redis.Expire(c, this.key, ttl).Err()
 }
 
 func (this *core) SetTTLAt(ts time.Time) error {
-	return this.redis.ExpireAt(this.key, ts).Err()
+	c := context.TODO()
+	return this.redis.ExpireAt(c, this.key, ts).Err()
 }

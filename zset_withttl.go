@@ -1,10 +1,11 @@
 package redisobj
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type ZSetItemString struct {
@@ -36,7 +37,8 @@ func (this *ZSetWithTTL) GetOrdering() int {
 
 func (this *ZSetWithTTL) Add(member interface{}, ts time.Time) bool {
 	elem := redis.Z{Member: member, Score: float64(ts.Unix())}
-	countAdded, err := this.redis.ZAddNX(this.key, elem).Result()
+	c := context.TODO()
+	countAdded, err := this.redis.ZAddNX(c, this.key, &elem).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -49,12 +51,13 @@ func (this *ZSetWithTTL) Set(member interface{}, ts time.Time) error {
 		Score:  float64(ts.Unix()),
 		Member: member,
 	}
-	_, err := this.redis.ZAdd(key, m).Result()
+	c := context.TODO()
+	_, err := this.redis.ZAdd(c, key, &m).Result()
 	return err
 }
 
 // func (this *ZSetWithTTL) Del(member string) error {
-// 	_, err := this.redis.ZRem(this.key, member).Result()
+// 	_, err := this.redis.ZRem(c, this.key, member).Result()
 // 	if err == redis.Nil {
 // 		err = nil
 // 	}
@@ -62,7 +65,7 @@ func (this *ZSetWithTTL) Set(member interface{}, ts time.Time) error {
 // }
 
 // func (this *ZSetWithTTL) Has(elem string) bool {
-// 	_, err := this.redis.ZScore(this.key, elem).Result()
+// 	_, err := this.redis.ZScore(c, this.key, elem).Result()
 // 	if err != nil {
 // 		if err == redis.Nil {
 // 			return false
@@ -73,7 +76,7 @@ func (this *ZSetWithTTL) Set(member interface{}, ts time.Time) error {
 // }
 
 // func (this *ZSetWithTTL) Size() (int, error) {
-// 	size, err := this.redis.ZCard(this.key).Result()
+// 	size, err := this.redis.ZCard(c, this.key).Result()
 // 	if err != nil {
 // 		if err == redis.Nil {
 // 			return 0, nil
@@ -84,16 +87,17 @@ func (this *ZSetWithTTL) Set(member interface{}, ts time.Time) error {
 // }
 
 // func (this *ZSetWithTTL) Clear() error {
-// 	_, err := this.redis.Del(this.key).Result()
+// 	_, err := this.redis.Del(c, this.key).Result()
 // 	return err
 // }
 
 func (this *ZSetWithTTL) getListByOrder(start int, end int, ordering int) ([]redis.Z, error) {
+	c := context.TODO()
 	if ordering == OrderingDesc {
-		list, err := this.redis.ZRevRangeWithScores(this.key, int64(start), int64(end)).Result()
+		list, err := this.redis.ZRevRangeWithScores(c, this.key, int64(start), int64(end)).Result()
 		return list, err
 	}
-	list, err := this.redis.ZRangeWithScores(this.key, int64(start), int64(end)).Result()
+	list, err := this.redis.ZRangeWithScores(c, this.key, int64(start), int64(end)).Result()
 	return list, err
 }
 
@@ -111,7 +115,8 @@ func (this *ZSetWithTTL) GetList(start int, count int) ([]redis.Z, error) {
 
 func (this *ZSetWithTTL) GetScore(member string) (int64, error) {
 	key := this.key
-	score, err := this.redis.ZScore(key, member).Result()
+	c := context.TODO()
+	score, err := this.redis.ZScore(c, key, member).Result()
 	if err == redis.Nil {
 		return 0, nil
 	}
@@ -174,11 +179,13 @@ func (this *ZSetWithTTL) GetTopString(count int, now time.Time) ([]string, error
 }
 
 func (this *ZSetWithTTL) SetTTL(ttl time.Duration) error {
-	return this.redis.Expire(this.key, ttl).Err()
+	c := context.TODO()
+	return this.redis.Expire(c, this.key, ttl).Err()
 }
 
 func (this *ZSetWithTTL) Exists() (bool, error) {
-	flag, err := this.redis.Exists(this.key).Result()
+	c := context.TODO()
+	flag, err := this.redis.Exists(c, this.key).Result()
 	if err == redis.Nil {
 		err = nil
 	}
@@ -206,8 +213,8 @@ func (this *ZSetWithTTL) DelByRanking(ranking int, count int) (int64, error) {
 	}
 	key := this.key
 	rds := this.redis
-	// log.Printf("key=%s start=%d end=%d\n", key, start, end)
-	delCount, err := rds.ZRemRangeByRank(key, start, end).Result()
+	c := context.TODO()
+	delCount, err := rds.ZRemRangeByRank(c, key, start, end).Result()
 	if err == redis.Nil {
 		err = nil
 	}

@@ -1,12 +1,13 @@
 package redisobj
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type Dict map[string]interface{}
@@ -75,10 +76,11 @@ func (this *RankList) GetRanking(member string) (int64, error) {
 	key := this.key
 	var ranking int64 = 0
 	var err error
+	c := context.TODO()
 	if this.Order == OrderingDesc {
-		ranking, err = this.Redis.ZRevRank(key, member).Result()
+		ranking, err = this.Redis.ZRevRank(c, key, member).Result()
 	} else {
-		ranking, err = this.Redis.ZRank(key, member).Result()
+		ranking, err = this.Redis.ZRank(c, key, member).Result()
 	}
 	// fmt.Printf("ranking = %d, err = %v", ranking, err)
 	if err == nil {
@@ -113,17 +115,19 @@ func (this *RankList) GetList(start int, count int) ([]redis.Z, error) {
 		return nil, fmt.Errorf("Invalid params start(%d) > end(%d)", start, end)
 	}
 
+	c := context.TODO()
 	if this.Order == OrderingDesc {
-		list, err := this.Redis.ZRevRangeWithScores(key, int64(start), int64(end)).Result()
+		list, err := this.Redis.ZRevRangeWithScores(c, key, int64(start), int64(end)).Result()
 		return list, err
 	}
-	list, err := this.Redis.ZRangeWithScores(key, int64(start), int64(end)).Result()
+	list, err := this.Redis.ZRangeWithScores(c, key, int64(start), int64(end)).Result()
 	return list, err
 }
 
 func (this *RankList) Size() (int, error) {
 	key := this.key
-	size, err := this.Redis.ZCard(key).Result()
+	c := context.TODO()
+	size, err := this.Redis.ZCard(c, key).Result()
 	if err == redis.Nil {
 		return 0, nil
 	}
@@ -132,16 +136,18 @@ func (this *RankList) Size() (int, error) {
 
 func (this *RankList) Set(member string, factor int64) (int64, error) {
 	key := this.key
-	m := redis.Z{
+	m := &redis.Z{
 		Score:  float64(factor),
 		Member: member,
 	}
-	return this.Redis.ZAddCh(key, m).Result()
+	c := context.TODO()
+	return this.Redis.ZAddCh(c, key, m).Result()
 }
 
 func (this *RankList) GetScore(member string) (int64, error) {
 	key := this.key
-	score, err := this.Redis.ZScore(key, member).Result()
+	c := context.TODO()
+	score, err := this.Redis.ZScore(c, key, member).Result()
 	if err == redis.Nil {
 		return 0, nil
 	}
@@ -161,11 +167,12 @@ func (this *RankList) GetScoreByRanking(ranking int) (int64, error) {
 
 func (this *RankList) SetX(member string, factor int64, data interface{}) (bool, error) {
 	key := this.key
-	m := redis.Z{
+	m := &redis.Z{
 		Score:  float64(factor),
 		Member: member,
 	}
-	_, err := this.Redis.ZAddCh(key, m).Result()
+	c := context.TODO()
+	_, err := this.Redis.ZAddCh(c, key, m).Result()
 	if err != nil {
 		return false, err
 	}
@@ -187,8 +194,8 @@ func (this *RankList) SetX(member string, factor int64, data interface{}) (bool,
 	}
 
 	keyOfMemer := strings.Join([]string{key, "data"}, ":")
-	flag, err := this.Redis.HSet(keyOfMemer, member, string(dataBytes)).Result()
-	return flag, err
+	flag, err := this.Redis.HSet(c, keyOfMemer, member, string(dataBytes)).Result()
+	return flag > 0, err
 }
 
 func (this *RankList) LimitIf() (int64, error) {
@@ -224,14 +231,15 @@ func (this *RankList) SetXIf(member string, score int64, data interface{}) (bool
 
 func (this *RankList) GetX(member string) (*RankItem, error) {
 	key := this.key
+	c := context.TODO()
 	keyOfMemer := strings.Join([]string{key, "data"}, ":")
-	score, err := this.Redis.ZScore(key, member).Result()
+	score, err := this.Redis.ZScore(c, key, member).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}
 
 	data := Dict{}
-	if dataText, err := this.Redis.HGet(keyOfMemer, member).Result(); err == nil {
+	if dataText, err := this.Redis.HGet(c, keyOfMemer, member).Result(); err == nil {
 		err := json.Unmarshal([]byte(dataText), &data)
 		if err != nil {
 			data = nil
@@ -251,8 +259,9 @@ func (this *RankList) GetX(member string) (*RankItem, error) {
 
 func (this *RankList) DelX(member string) error {
 	this.Del(member)
+	c := context.TODO()
 	keyOfData := strings.Join([]string{this.key, "data"}, ":")
-	_, err := this.Redis.Del(keyOfData).Result()
+	_, err := this.Redis.Del(c, keyOfData).Result()
 	if err == redis.Nil {
 		return nil
 	}
@@ -308,16 +317,18 @@ func (this *RankList) Clear(magic string) error {
 
 func (this *RankList) ClearX() error {
 	key := this.key
-	this.Redis.Del(key).Result()
+	c := context.TODO()
+	this.Redis.Del(c, key).Result()
 
 	keyOfData := strings.Join([]string{this.key, "data"}, ":")
-	this.Redis.Del(keyOfData).Result()
+	this.Redis.Del(c, keyOfData).Result()
 	return nil
 }
 
 func (this *RankList) Del(member string) (bool, error) {
 	key := this.key
-	delCount, err := this.Redis.ZRem(key, member).Result()
+	c := context.TODO()
+	delCount, err := this.Redis.ZRem(c, key, member).Result()
 	return delCount > 0, err
 }
 
@@ -345,8 +356,8 @@ func (this *RankList) DelByRanking(ranking int, count int) (int64, error) {
 		end = int64(-ranking)
 	}
 	key := this.key
-	// log.Printf("key=%s start=%d end=%d\n", key, start, end)
-	delCount, err := this.Redis.ZRemRangeByRank(key, start, end).Result()
+	c := context.TODO()
+	delCount, err := this.Redis.ZRemRangeByRank(c, key, start, end).Result()
 	if err == redis.Nil {
 		err = nil
 	}

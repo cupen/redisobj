@@ -1,10 +1,11 @@
 package redisobj
 
 import (
+	"context"
 	"errors"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type Serializer interface {
@@ -40,12 +41,14 @@ func (this *Value) Set(obj interface{}, ttl time.Duration) error {
 		return err
 	}
 	key := this.key
-	return this.redis.Set(key, data, ttl).Err()
+	c := context.TODO()
+	return this.redis.Set(c, key, data, ttl).Err()
 }
 
 func (this *Value) Get(obj interface{}) error {
 	key := this.key
-	data, err := this.redis.Get(key).Bytes()
+	c := context.TODO()
+	data, err := this.redis.Get(c, key).Bytes()
 	if err != nil {
 		return err
 	}
@@ -53,7 +56,8 @@ func (this *Value) Get(obj interface{}) error {
 }
 
 func (this *Value) Delete() error {
-	err := this.redis.Del(this.key).Err()
+	c := context.TODO()
+	err := this.redis.Del(c, this.key).Err()
 	if err == redis.Nil {
 		return nil
 	}
