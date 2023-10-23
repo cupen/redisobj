@@ -2,7 +2,6 @@ package redisobj
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -14,19 +13,16 @@ type Serializer interface {
 }
 
 type Value struct {
-	core
+	*core
 	serializer Serializer
 }
 
 func New(rds *redis.Client, key string, serializer Serializer) Value {
 	if serializer == nil {
-		panic(errors.New("nil serializer"))
+		panic(ErrNullSerializer)
 	}
 	return Value{
-		core: core{
-			redis: rds,
-			key:   key,
-		},
+		core:       newCore(rds, key),
 		serializer: serializer,
 	}
 }
@@ -40,15 +36,13 @@ func (this *Value) Set(obj interface{}, ttl time.Duration) error {
 	if err != nil {
 		return err
 	}
-	key := this.key
-	c := context.TODO()
-	return this.redis.Set(c, key, data, ttl).Err()
+	ctx := context.TODO()
+	return this.redis.Set(ctx, this.key, data, ttl).Err()
 }
 
 func (this *Value) Get(obj interface{}) error {
-	key := this.key
-	c := context.TODO()
-	data, err := this.redis.Get(c, key).Bytes()
+	ctx := context.TODO()
+	data, err := this.redis.Get(ctx, this.key).Bytes()
 	if err != nil {
 		return err
 	}
@@ -56,8 +50,8 @@ func (this *Value) Get(obj interface{}) error {
 }
 
 func (this *Value) Delete() error {
-	c := context.TODO()
-	err := this.redis.Del(c, this.key).Err()
+	ctx := context.TODO()
+	err := this.redis.Del(ctx, this.key).Err()
 	if err == redis.Nil {
 		return nil
 	}

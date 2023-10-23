@@ -58,38 +58,41 @@ func (this *ZSet) Add(member interface{}, score int64) error {
 	return nil
 }
 
-func (this *ZSet) AddBatch(elems ...*redis.Z) bool {
+func (this *ZSet) AddBatch(elems ...*redis.Z) error {
 	c := context.TODO()
-	countAdded, err := this.redis.ZAdd(c, this.key, elems...).Result()
+	_, err := this.redis.ZAdd(c, this.key, elems...).Result()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if this.maxMembers > 0 {
 		_, _ = this.LimitIf(this.maxMembers)
 	}
-	return countAdded > 0
+	return nil
 }
 
 func (this *ZSet) Del(member string) error {
 	c := context.TODO()
 	_, err := this.redis.ZRem(c, this.key, member).Result()
-	if err == redis.Nil {
-		err = nil
+	if err != nil {
+		if err == redis.Nil {
+			return nil
+		}
+		return err
 	}
 	return err
 }
 
-func (this *ZSet) Has(elem string) bool {
-	c := context.TODO()
-	_, err := this.redis.ZScore(c, this.key, elem).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return false
-		}
-		panic(err)
-	}
-	return true
-}
+// func (this *ZSet) Has(elem string) (bool, error) {
+// 	c := context.TODO()
+// 	exists, err := this.redis.ZScore(c, this.key, elem).Result()
+// 	if err != nil {
+// 		if err == redis.Nil {
+// 			return false, nil
+// 		}
+// 		return false, err
+// 	}
+// 	return exists, nil
+// }
 
 func (this *ZSet) Size() (int, error) {
 	c := context.TODO()
@@ -98,15 +101,21 @@ func (this *ZSet) Size() (int, error) {
 		if err == redis.Nil {
 			return 0, nil
 		}
-		// panic(err)
+		return 0, err
 	}
-	return int(size), err
+	return int(size), nil
 }
 
 func (this *ZSet) Clear() error {
 	c := context.TODO()
-	_, err := this.redis.Del(c, this.key).Result()
-	return err
+	_, err := this.redis.Unlink(c, this.key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (this *ZSet) GetListByOrder(start int, end int, ordering int) ([]redis.Z, error) {
@@ -159,14 +168,13 @@ func (this *ZSet) SetTTL(ttl time.Duration) error {
 
 func (this *ZSet) Exists() (bool, error) {
 	c := context.TODO()
-
 	flag, err := this.redis.Exists(c, this.key).Result()
 	return flag > 0, err
 }
 
 func (this *ZSet) DelByRanking(ranking int, count int) (int64, error) {
 	if ranking <= 0 {
-		return 0, fmt.Errorf("Invalid ranking:%d", ranking)
+		return 0, fmt.Errorf("invalid ranking:%d", ranking)
 	}
 	if count < 1 {
 		return 0, nil

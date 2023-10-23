@@ -2,9 +2,17 @@ package redisobj
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+)
+
+var (
+	ErrEmptyKey       = errors.New("empty key")
+	ErrNullClient     = errors.New("null client")
+	ErrNullSerializer = errors.New("nil serializer")
 )
 
 type core struct {
@@ -12,16 +20,33 @@ type core struct {
 	key   string
 }
 
-func (this *core) GetKey() string {
-	return this.key
+func newCore(rds *redis.Client, key string) *core {
+	if rds == nil {
+		panic(ErrNullClient)
+	}
+	if key == "" {
+		panic(ErrEmptyKey)
+	}
+	return &core{
+		redis: rds,
+		key:   key,
+	}
 }
 
-func (this *core) SetTTL(ttl time.Duration) error {
-	c := context.TODO()
-	return this.redis.Expire(c, this.key, ttl).Err()
+func (c *core) buildKey(name ...string) string {
+	return strings.Join(append([]string{c.key}, name...), ":")
 }
 
-func (this *core) SetTTLAt(ts time.Time) error {
-	c := context.TODO()
-	return this.redis.ExpireAt(c, this.key, ts).Err()
+func (c *core) GetKey() string {
+	return c.key
+}
+
+func (c *core) SetTTL(ttl time.Duration) error {
+	ctx := context.TODO()
+	return c.redis.Expire(ctx, c.key, ttl).Err()
+}
+
+func (c *core) SetTTLAt(ts time.Time) error {
+	ctx := context.TODO()
+	return c.redis.ExpireAt(ctx, c.key, ts).Err()
 }
