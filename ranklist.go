@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type Dict map[string]interface{}
@@ -99,11 +99,7 @@ func (this *RankList) GetKeys(start int, count int) ([]string, error) {
 	}
 	rs := make([]string, len(_list))
 	for i, z := range _list {
-		_val, ok := z.Member.(string)
-		if !ok {
-			// error
-		}
-		rs[i] = _val
+		rs[i] = z.Member
 	}
 	return rs, nil
 }
@@ -136,12 +132,12 @@ func (this *RankList) Size() (int, error) {
 
 func (this *RankList) Set(member string, factor int64) (int64, error) {
 	key := this.key
-	m := &redis.Z{
+	m := redis.Z{
 		Score:  float64(factor),
 		Member: member,
 	}
 	c := context.TODO()
-	return this.Redis.ZAddCh(c, key, m).Result()
+	return this.Redis.ZAdd(c, key, m).Result()
 }
 
 func (this *RankList) GetScore(member string) (int64, error) {
@@ -167,12 +163,12 @@ func (this *RankList) GetScoreByRanking(ranking int) (int64, error) {
 
 func (this *RankList) SetX(member string, factor int64, data interface{}) (bool, error) {
 	key := this.key
-	m := &redis.Z{
+	m := redis.Z{
 		Score:  float64(factor),
 		Member: member,
 	}
 	c := context.TODO()
-	_, err := this.Redis.ZAddCh(c, key, m).Result()
+	_, err := this.Redis.ZAdd(c, key, m).Result()
 	if err != nil {
 		return false, err
 	}
@@ -287,7 +283,7 @@ func (this *RankList) GetXList(start int, count int) (*[]*RankItem, error) {
 	}
 	rs := []*RankItem{}
 	for _, z := range list {
-		item, _ := this.GetX(z.Member.(string))
+		item, _ := this.GetX(z.Member)
 		if item == nil {
 			continue
 		}

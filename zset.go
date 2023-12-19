@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -45,10 +45,10 @@ func (this *ZSet) GetOrdering() int {
 	return this.ordering
 }
 
-func (this *ZSet) Add(member interface{}, score int64) error {
+func (this *ZSet) Add(member string, score int64) error {
 	c := context.TODO()
 	elem := redis.Z{Member: member, Score: float64(score)}
-	_, err := this.redis.ZAdd(c, this.key, &elem).Result()
+	_, err := this.redis.ZAdd(c, this.key, elem).Result()
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (this *ZSet) Add(member interface{}, score int64) error {
 	return nil
 }
 
-func (this *ZSet) AddBatch(elems ...*redis.Z) error {
+func (this *ZSet) AddBatch(elems ...redis.Z) error {
 	c := context.TODO()
 	_, err := this.redis.ZAdd(c, this.key, elems...).Result()
 	if err != nil {

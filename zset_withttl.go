@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type ZSetItemString struct {
@@ -35,24 +35,24 @@ func (this *ZSetWithTTL) GetOrdering() int {
 	return this.ordering
 }
 
-func (this *ZSetWithTTL) Add(member interface{}, ts time.Time) bool {
+func (this *ZSetWithTTL) Add(member string, ts time.Time) bool {
 	elem := redis.Z{Member: member, Score: float64(ts.Unix())}
 	c := context.TODO()
-	countAdded, err := this.redis.ZAddNX(c, this.key, &elem).Result()
+	countAdded, err := this.redis.ZAddNX(c, this.key, elem).Result()
 	if err != nil {
 		panic(err)
 	}
 	return countAdded > 0
 }
 
-func (this *ZSetWithTTL) Set(member interface{}, ts time.Time) error {
+func (this *ZSetWithTTL) Set(member string, ts time.Time) error {
 	key := this.key
 	m := redis.Z{
 		Score:  float64(ts.Unix()),
 		Member: member,
 	}
 	c := context.TODO()
-	_, err := this.redis.ZAdd(c, key, &m).Result()
+	_, err := this.redis.ZAdd(c, key, m).Result()
 	return err
 }
 
@@ -169,11 +169,7 @@ func (this *ZSetWithTTL) GetTopString(count int, now time.Time) ([]string, error
 		if item.Score < expiredAt {
 			break
 		}
-		member, ok := item.Member.(string)
-		if !ok {
-			return rs, fmt.Errorf("Invalid member:%v", item)
-		}
-		rs = append(rs, member)
+		rs = append(rs, item.Member)
 	}
 	return rs, nil
 }
