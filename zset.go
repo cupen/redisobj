@@ -82,17 +82,17 @@ func (this *ZSet) Del(member string) error {
 	return err
 }
 
-// func (this *ZSet) Has(elem string) (bool, error) {
-// 	c := context.TODO()
-// 	exists, err := this.redis.ZScore(c, this.key, elem).Result()
-// 	if err != nil {
-// 		if err == redis.Nil {
-// 			return false, nil
-// 		}
-// 		return false, err
-// 	}
-// 	return exists, nil
-// }
+func (this *ZSet) Has(elem string) (bool, error) {
+	c := context.TODO()
+	score, err := this.redis.ZScore(c, this.key, elem).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return false, nil
+		}
+		return false, err
+	}
+	return score > 0, nil
+}
 
 func (this *ZSet) Size() (int, error) {
 	c := context.TODO()

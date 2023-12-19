@@ -56,40 +56,23 @@ func (this *ZSetWithTTL) Set(member string, ts time.Time) error {
 	return err
 }
 
-// func (this *ZSetWithTTL) Del(member string) error {
-// 	_, err := this.redis.ZRem(c, this.key, member).Result()
-// 	if err == redis.Nil {
-// 		err = nil
-// 	}
-// 	return err
-// }
+func (this *ZSetWithTTL) Size() (int, error) {
+	c := context.TODO()
+	size, err := this.redis.ZCard(c, this.key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return 0, nil
+		}
+		// panic(err)
+	}
+	return int(size), err
+}
 
-// func (this *ZSetWithTTL) Has(elem string) bool {
-// 	_, err := this.redis.ZScore(c, this.key, elem).Result()
-// 	if err != nil {
-// 		if err == redis.Nil {
-// 			return false
-// 		}
-// 		panic(err)
-// 	}
-// 	return true
-// }
-
-// func (this *ZSetWithTTL) Size() (int, error) {
-// 	size, err := this.redis.ZCard(c, this.key).Result()
-// 	if err != nil {
-// 		if err == redis.Nil {
-// 			return 0, nil
-// 		}
-// 		// panic(err)
-// 	}
-// 	return int(size), err
-// }
-
-// func (this *ZSetWithTTL) Clear() error {
-// 	_, err := this.redis.Del(c, this.key).Result()
-// 	return err
-// }
+func (this *ZSetWithTTL) Clear() error {
+	c := context.TODO()
+	_, err := this.redis.Unlink(c, this.key).Result()
+	return err
+}
 
 func (this *ZSetWithTTL) getListByOrder(start int, end int, ordering int) ([]redis.Z, error) {
 	c := context.TODO()
@@ -152,26 +135,6 @@ func (this *ZSetWithTTL) GetTop(count int, now time.Time) ([]redis.Z, error) {
 		return nil, nil
 	}
 	return items[0 : curIndex+1], nil
-}
-
-func (this *ZSetWithTTL) GetTopString(count int, now time.Time) ([]string, error) {
-	items, err := this.GetList(0, count)
-	if err != nil || len(items) <= 0 {
-		if err == redis.Nil {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	var expiredAt = float64(now.Unix() - int64(this.ttl/time.Second))
-	var rs = []string{}
-	for _, item := range items {
-		if item.Score < expiredAt {
-			break
-		}
-		rs = append(rs, item.Member)
-	}
-	return rs, nil
 }
 
 func (this *ZSetWithTTL) SetTTL(ttl time.Duration) error {
