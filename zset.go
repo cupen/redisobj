@@ -3,6 +3,7 @@ package redisobj
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -20,20 +21,11 @@ type ZSet struct {
 	maxMembers int
 }
 
-func NewZSet(c *redis.Client, key string) ZSet {
-	return ZSet{
+func NewZSet(c *redis.Client, key string) *ZSet {
+	return &ZSet{
 		redis:    c,
 		ordering: OrderingDesc,
 		key:      key,
-	}
-}
-
-func NewZSetWithLimit(c *redis.Client, key string, maxMembers int) ZSet {
-	return ZSet{
-		redis:      c,
-		ordering:   OrderingDesc,
-		key:        key,
-		maxMembers: maxMembers,
 	}
 }
 
@@ -45,7 +37,7 @@ func (this *ZSet) GetOrdering() int {
 	return this.ordering
 }
 
-func (this *ZSet) Add(member string, score int64) error {
+func (this *ZSet) Set(member string, score int64) error {
 	c := context.TODO()
 	elem := redis.Z{Member: member, Score: float64(score)}
 	_, err := this.redis.ZAdd(c, this.key, elem).Result()
@@ -56,6 +48,10 @@ func (this *ZSet) Add(member string, score int64) error {
 		_, _ = this.LimitIf(this.maxMembers)
 	}
 	return nil
+}
+
+func (this *ZSet) Add(member string, score int64) error {
+	return this.Set(member, score)
 }
 
 func (this *ZSet) AddBatch(elems ...redis.Z) error {
@@ -200,4 +196,19 @@ func (this *ZSet) DelByRanking(ranking int, count int) (int64, error) {
 		err = nil
 	}
 	return delCount, err
+}
+
+// shallow copy
+func (this *ZSet) Clone() *ZSet {
+	cloned := *this
+	if &cloned == this {
+		panic("clone failed")
+	}
+	return &cloned
+}
+
+func (this *ZSet) WithID(id string) *ZSet {
+	cloned := this.Clone()
+	cloned.key = strings.Join([]string{this.key, id}, ":")
+	return cloned
 }

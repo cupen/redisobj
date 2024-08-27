@@ -32,7 +32,7 @@ type RankList struct {
 
 func NewRankList(baseKey string, redis *redis.Client, orderName string) RankList {
 	if baseKey == "" {
-		panic(fmt.Errorf("Empty baseKey for ranklist"))
+		panic(fmt.Errorf("empty baseKey for ranklist"))
 	}
 	rank := RankList{
 		Redis:      redis,
@@ -51,10 +51,13 @@ func (this *RankList) SetID(rankId string) {
 	this.key = strings.Join([]string{this.baseKey, rankId}, ":")
 }
 
-func (this RankList) WithID(rankId string) RankList {
-	cloneObj := this
+func (this *RankList) WithID(rankId string) *RankList {
+	cloneObj := *this
+	if &cloneObj == this {
+		panic(fmt.Errorf("rankList.WithID: clone failed"))
+	}
 	cloneObj.SetID(rankId)
-	return cloneObj
+	return &cloneObj
 }
 
 // OrderingAsc or OrderingDesc
@@ -66,7 +69,7 @@ func (this *RankList) SetOrdering(orderName string) {
 		case "desc":
 			return OrderingDesc
 		default:
-			panic(fmt.Errorf("Invalid Order: \"%s\"", ordering))
+			panic(fmt.Errorf("invalid order: \"%s\"", ordering))
 		}
 	}
 	this.Order = _parse(orderName)
@@ -99,7 +102,7 @@ func (this *RankList) GetKeys(start int, count int) ([]string, error) {
 	}
 	rs := make([]string, len(_list))
 	for i, z := range _list {
-		rs[i] = z.Member
+		rs[i] = z.Member.(string)
 	}
 	return rs, nil
 }
@@ -283,7 +286,7 @@ func (this *RankList) GetXList(start int, count int) (*[]*RankItem, error) {
 	}
 	rs := []*RankItem{}
 	for _, z := range list {
-		item, _ := this.GetX(z.Member)
+		item, _ := this.GetX(z.Member.(string))
 		if item == nil {
 			continue
 		}

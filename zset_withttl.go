@@ -14,14 +14,14 @@ type ZSetItemString struct {
 }
 
 type ZSetWithTTL struct {
-	ZSet
+	*ZSet
 	ttl time.Duration
 }
 
-func NewZSetWithTTL(c *redis.Client, key string, ttl time.Duration) ZSetWithTTL {
+func NewZSetWithTTL(c *redis.Client, key string, ttl time.Duration) *ZSetWithTTL {
 	zset := NewZSet(c, key)
 	zset.SetOrdering(OrderingDesc)
-	return ZSetWithTTL{
+	return &ZSetWithTTL{
 		ZSet: zset,
 		ttl:  ttl,
 	}
