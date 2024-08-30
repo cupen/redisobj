@@ -145,6 +145,25 @@ func (this *ZSet) GetScore(member string) (int64, error) {
 	return int64(score), err
 }
 
+func (this *ZSet) GetRanking(member string) (int64, error) {
+	key := this.key
+	var ranking int64 = 0
+	var err error
+	c := context.TODO()
+	if this.ordering == OrderingDesc {
+		ranking, err = this.redis.ZRevRank(c, key, member).Result()
+	} else {
+		ranking, err = this.redis.ZRank(c, key, member).Result()
+	}
+	// fmt.Printf("ranking = %d, err = %v", ranking, err)
+	if err == nil {
+		ranking += 1
+	} else if err == redis.Nil {
+		return 0, nil
+	}
+	return ranking, err
+}
+
 func (this *ZSet) LimitIf(maxMembers int) (int64, error) {
 	if maxMembers <= 0 {
 		// unlimit
