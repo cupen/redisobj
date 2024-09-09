@@ -114,8 +114,13 @@ func (this *ZSet) Clear() error {
 	return nil
 }
 
-func (this *ZSet) GetListByOrder(start int, end int, ordering int) ([]redis.Z, error) {
+func (this *ZSet) GetListByOrder(start int, count int, ordering int) ([]redis.Z, error) {
 	c := context.TODO()
+	end := start + count - 1
+	if start > end {
+		return nil, fmt.Errorf("invalid params: start(%d) > end(%d)", start, end)
+	}
+
 	if ordering == OrderingDesc {
 		list, err := this.redis.ZRevRangeWithScores(c, this.key, int64(start), int64(end)).Result()
 		return list, err
@@ -128,10 +133,7 @@ func (this *ZSet) GetList(start int, count int) ([]redis.Z, error) {
 	if count <= 0 {
 		return nil, nil
 	}
-	end := start + count - 1
-	if start > end {
-		return nil, fmt.Errorf("Invalid params start(%d) > end(%d)", start, end)
-	}
+
 	return this.GetListByOrder(start, count, this.ordering)
 }
 
