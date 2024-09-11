@@ -24,8 +24,8 @@ type ZSet struct {
 func NewZSet(c *redis.Client, key string) *ZSet {
 	return &ZSet{
 		redis:    c,
-		ordering: OrderingDesc,
 		key:      key,
+		ordering: OrderingDesc,
 	}
 }
 
@@ -37,20 +37,20 @@ func (this *ZSet) GetOrdering() int {
 	return this.ordering
 }
 
-func (this *ZSet) Set(member string, score int64) error {
+func (this *ZSet) Set(member string, score float64) error {
 	c := context.TODO()
-	elem := redis.Z{Member: member, Score: float64(score)}
+	elem := redis.Z{Member: member, Score: score}
 	_, err := this.redis.ZAdd(c, this.key, elem).Result()
 	if err != nil {
 		return err
 	}
-	if this.maxMembers > 0 {
-		_, _ = this.LimitIf(this.maxMembers)
-	}
+	// if this.maxMembers > 0 {
+	// 	_, _ = this.LimitIf(this.maxMembers)
+	// }
 	return nil
 }
 
-func (this *ZSet) Add(member string, score int64) error {
+func (this *ZSet) Add(member string, score float64) error {
 	return this.Set(member, score)
 }
 
@@ -60,13 +60,13 @@ func (this *ZSet) AddBatch(elems ...redis.Z) error {
 	if err != nil {
 		return err
 	}
-	if this.maxMembers > 0 {
-		_, _ = this.LimitIf(this.maxMembers)
-	}
+	// if this.maxMembers > 0 {
+	// 	_, _ = this.LimitIf(this.maxMembers)
+	// }
 	return nil
 }
 
-func (this *ZSet) Del(member string) error {
+func (this *ZSet) Delete(member string) error {
 	c := context.TODO()
 	_, err := this.redis.ZRem(c, this.key, member).Result()
 	if err != nil {
@@ -80,17 +80,17 @@ func (this *ZSet) Del(member string) error {
 
 func (this *ZSet) Has(elem string) (bool, error) {
 	c := context.TODO()
-	score, err := this.redis.ZScore(c, this.key, elem).Result()
+	_, err := this.redis.ZScore(c, this.key, elem).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return false, nil
 		}
 		return false, err
 	}
-	return score > 0, nil
+	return true, nil
 }
 
-func (this *ZSet) Size() (int, error) {
+func (this *ZSet) Size() (int64, error) {
 	c := context.TODO()
 	size, err := this.redis.ZCard(c, this.key).Result()
 	if err != nil {
@@ -99,7 +99,7 @@ func (this *ZSet) Size() (int, error) {
 		}
 		return 0, err
 	}
-	return int(size), nil
+	return size, nil
 }
 
 func (this *ZSet) Clear() error {
@@ -133,18 +133,17 @@ func (this *ZSet) GetList(start int, count int) ([]redis.Z, error) {
 	if count <= 0 {
 		return nil, nil
 	}
-
 	return this.GetListByOrder(start, count, this.ordering)
 }
 
-func (this *ZSet) GetScore(member string) (int64, error) {
+func (this *ZSet) GetScore(member string) (float64, error) {
 	key := this.key
 	c := context.TODO()
 	score, err := this.redis.ZScore(c, key, member).Result()
 	if err == redis.Nil {
 		return 0, nil
 	}
-	return int64(score), err
+	return score, err
 }
 
 func (this *ZSet) GetRanking(member string) (int64, error) {

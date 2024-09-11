@@ -27,7 +27,7 @@ func (this *Set) Add(elems ...interface{}) (int, error) {
 	return int(countAdded), err
 }
 
-func (this *Set) Del(elems ...interface{}) (int, error) {
+func (this *Set) Delete(elems ...interface{}) (int, error) {
 	ctx := context.TODO()
 	countDeleted, err := this.redis.SRem(ctx, this.key, elems...).Result()
 	if err == redis.Nil {
@@ -57,13 +57,13 @@ func (this *Set) ToList() ([]string, error) {
 	return rs, nil
 }
 
-func (this *Set) Size() (int, error) {
+func (this *Set) Size() (int64, error) {
 	c := context.TODO()
 	size, err := this.redis.SCard(c, this.key).Result()
 	if err == redis.Nil {
 		err = nil
 	}
-	return int(size), err
+	return size, err
 }
 
 func (this *Set) Reset(elems []string) error {

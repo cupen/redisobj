@@ -10,10 +10,15 @@ import (
 )
 
 var (
+	ErrNil            = redis.Nil
 	ErrEmptyKey       = errors.New("empty key")
 	ErrNullClient     = errors.New("null client")
 	ErrNullSerializer = errors.New("nil serializer")
 )
+
+func IsNil(err error) bool {
+	return err == redis.Nil
+}
 
 type core struct {
 	redis *redis.Client
