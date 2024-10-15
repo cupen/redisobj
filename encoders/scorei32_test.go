@@ -12,7 +12,7 @@ import (
 func TestScoreI32(t *testing.T) {
 	// 生成测试用例
 
-	obj := &ScoreI32{}
+	obj := &scoreI32{}
 	t.Run("Encode", func(t *testing.T) {
 		assert.Equal(t, int64(0), obj.Encode(-1, 1))
 		assert.Equal(t, int64(0), obj.Encode(0, 1))

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"math"
 	"strings"
 
 	"github.com/cupen/redisobj/encoders"
@@ -15,11 +17,11 @@ type Dict map[string]interface{}
 // const OrderingAsc = 0
 // const OrderingDesc = 1
 
-type RankItem struct {
-	Member string
-	Score  float64
-	Data   Dict
-}
+// type RankItem struct {
+// 	Member string
+// 	Score  float64
+// 	Data   Dict
+// }
 
 type RankList struct {
 	redis   *redis.Client
@@ -101,16 +103,24 @@ func (this *RankList) GetList(start int, count int) ([]redis.Z, error) {
 		return nil, fmt.Errorf("invalid params: start(%d) > end(%d)", start, end)
 	}
 
+	var _list []redis.Z
+	var err error
 	c := context.TODO()
 	if this.Order == OrderingDesc {
-		list, err := this.redis.ZRevRangeWithScores(c, key, int64(start), int64(end)).Result()
-		return list, err
+		_list, err = this.redis.ZRevRangeWithScores(c, key, int64(start), int64(end)).Result()
+	} else {
+		_list, err = this.redis.ZRangeWithScores(c, key, int64(start), int64(end)).Result()
 	}
-	list, err := this.redis.ZRangeWithScores(c, key, int64(start), int64(end)).Result()
+	if err != nil {
+		if err == redis.Nil {
+			err = nil
+		}
+		return nil, err
+	}
 	if this.enc != nil {
-		this._decodeScores(list)
+		this._decodeScores(_list)
 	}
-	return list, err
+	return _list, nil
 }
 
 func (this *RankList) Size() (int64, error) {
@@ -124,13 +134,17 @@ func (this *RankList) Size() (int64, error) {
 }
 
 func (this *RankList) _decodeScores(items []redis.Z) {
-	for _, item := range items {
-		item.Score = float64(this.enc.Decode(int64(item.Score)))
+	for i, item := range items {
+		items[i].Score = float64(this.enc.Decode(int64(item.Score)))
 	}
 }
 
 func (this *RankList) Set(member string, score float64, factor int32) (int64, error) {
 	if this.enc != nil {
+		if score > math.MaxInt32 {
+			slog.Error("[redisobj.RankList] Set: score too large", "score", score, "factor", factor)
+			return 0, fmt.Errorf("score too large: %f", score)
+		}
 		score = float64(this.enc.Encode(int32(score), factor))
 	}
 	key := this.key

@@ -2,9 +2,9 @@ package redisobj
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
-	"github.com/cupen/redisobj/encoders"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/stretchr/testify/assert"
@@ -205,7 +205,31 @@ func TestRankList_DeleteByRanking(t *testing.T) {
 func TestRankList_WithEncoder(t *testing.T) {
 	rank := newTestObj(t, "prefiex_test_WithEncoder", "desc")
 
-	enc := &encoders.ScoreI32{}
+	enc := &encoders.scoreI32{}
+	rank = rank.WithEncoder(enc)
+	factor := int32(math.MaxInt32)
+	rank.Set("id1", 1, 0)
+	rank.Set("id2", 2, 0)
+	rank.Set("id3", 3, 0)
+	rank.Set("id4", 4, 0)
+	rank.Set("id5", 5, factor)
+	rank2 := rank.Clone().WithEncoder(enc)
+	rank2.Set("id6", 6, 0)
+
+	score5, err := rank2.GetScore("id5")
+	assert.NoError(t, err)
+	assert.Equal(t, float64(5), score5)
+
+	score6, err := rank2.GetScore("id6")
+	assert.NoError(t, err)
+	assert.Equal(t, float64(6), score6)
+}
+
+func TestRankList_WithEncoder_Mixed(t *testing.T) {
+	rank := newTestObj(t, "prefiex_test_WithEncoder", "desc")
+
+	enc := &encoders.scoreI32{}
+	rank = rank.WithEncoder(enc)
 	rank.Set("id1", 1, 0)
 	rank.Set("id2", 2, 0)
 	rank.Set("id3", 3, 0)
@@ -221,4 +245,17 @@ func TestRankList_WithEncoder(t *testing.T) {
 	score6, err := rank2.GetScore("id6")
 	assert.NoError(t, err)
 	assert.Equal(t, float64(6), score6)
+
+	items, err := rank2.GetTop(10)
+	assert.NoError(t, err)
+	if assert.Equal(t, 6, len(items)) {
+		assert.Equal(t, "id6", items[0].Member)
+		assert.Equal(t, "id5", items[1].Member)
+		assert.Equal(t, "id4", items[2].Member)
+		assert.Equal(t, "id3", items[3].Member)
+		assert.Equal(t, "id2", items[4].Member)
+		assert.Equal(t, "id1", items[5].Member)
+
+	}
+
 }
