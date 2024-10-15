@@ -89,11 +89,14 @@ func (this *RankList) GetRanking(member string) (int64, error) {
 	} else {
 		ranking, err = this.redis.ZRank(c, key, member).Result()
 	}
-	// log.Printf("ranking = %d, err = %v", ranking, err)
-	if err == nil {
-		ranking += 1
+	if err != nil {
+		if err == redis.Nil {
+			return 0, nil
+		}
+		return 0, err
 	}
-	return ranking, err
+	// log.Printf("ranking = %d, err = %v", ranking, err)
+	return ranking + 1, err
 }
 
 func (this *RankList) GetList(start int, count int) ([]redis.Z, error) {
@@ -160,9 +163,13 @@ func (this *RankList) GetScore(member string) (float64, error) {
 	key := this.key
 	c := context.TODO()
 	score, err := this.redis.ZScore(c, key, member).Result()
-	if err == redis.Nil {
+	if err != nil {
+		if err == redis.Nil {
+			return 0, nil
+		}
 		return 0, nil
 	}
+
 	if this.enc != nil {
 		score = float64(this.enc.Decode(int64(score)))
 	}
