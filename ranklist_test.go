@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/cupen/redisobj/encoders"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/stretchr/testify/assert"
@@ -205,7 +206,7 @@ func TestRankList_DeleteByRanking(t *testing.T) {
 func TestRankList_WithEncoder(t *testing.T) {
 	rank := newTestObj(t, "prefiex_test_WithEncoder", "desc")
 
-	enc := &encoders.scoreI32{}
+	enc := encoders.LastInIsBigger
 	rank = rank.WithEncoder(enc)
 	factor := int32(math.MaxInt32)
 	rank.Set("id1", 1, 0)
@@ -228,7 +229,7 @@ func TestRankList_WithEncoder(t *testing.T) {
 func TestRankList_WithEncoder_Mixed(t *testing.T) {
 	rank := newTestObj(t, "prefiex_test_WithEncoder", "desc")
 
-	enc := &encoders.scoreI32{}
+	enc := encoders.LastInIsBigger
 	rank = rank.WithEncoder(enc)
 	rank.Set("id1", 1, 0)
 	rank.Set("id2", 2, 0)

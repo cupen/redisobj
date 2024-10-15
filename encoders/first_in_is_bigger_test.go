@@ -1,49 +1,54 @@
 package encoders
 
 import (
+	"fmt"
 	"math"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFirstInIsBigger(t *testing.T) {
 	enc := FirstInIsBigger
 
-	t.Run("Encode", func(t *testing.T) {
+	t.Run("Encode/Decode", func(t *testing.T) {
+		now := time.Now()
+		ts := int32(now.Unix())
 		tests := []struct {
 			score  int32
 			factor int32
-			want   int64
+			isSafe bool
 		}{
-			{100, 50, enc.Encode(100, 50)},
-			{200, 100, enc.Encode(200, math.MaxInt32-100)},
-			{300, 150, enc.Encode(300, math.MaxInt32-150)},
+			{1, ts, true},
+			{2, ts, true},
+			{3, ts, true},
+
+			{1000, ts, true},
+			{2000, ts, true},
+			{3000, ts, true},
+
+			{1<<21 - 3, ts, true},
+			{1<<21 - 2, ts, true},
+			{1<<21 - 1, ts, true},
+
+			{math.MaxInt32 - 3, ts, false},
+			{math.MaxInt32 - 2, ts, false},
+			{math.MaxInt32 - 1, ts, false},
+			{math.MaxInt32, ts, false},
 		}
 
-		for _, tt := range tests {
-			t.Run("", func(t *testing.T) {
-				if got := enc.Encode(tt.score, tt.factor); got != tt.want {
-					t.Errorf("Encode() = %v, want %v", got, tt.want)
+		for i, tt := range tests {
+			name := fmt.Sprintf("val=%d", tt.score)
+			t.Run(name, func(t *testing.T) {
+				got := float64(enc.Encode(tt.score, tt.factor+int32(i)))
+				if tt.isSafe {
+					assert.Less(t, got, float64(1<<53-1), "last value should be less than MaxInt32")
 				}
+				newVal := enc.Decode(int64(got))
+				assert.Equal(t, tt.score, newVal, "score should be the same")
 			})
 		}
 	})
 
-	t.Run("Decode", func(t *testing.T) {
-		tests := []struct {
-			score int64
-			want  int32
-		}{
-			{enc.Encode(100, math.MaxInt32-50), 100},
-			{enc.Encode(200, math.MaxInt32-100), 200},
-			{enc.Encode(300, math.MaxInt32-150), 300},
-		}
-
-		for _, tt := range tests {
-			t.Run("", func(t *testing.T) {
-				if got := enc.Decode(tt.score); got != tt.want {
-					t.Errorf("Decode() = %v, want %v", got, tt.want)
-				}
-			})
-		}
-	})
 }
