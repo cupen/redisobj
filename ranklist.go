@@ -79,6 +79,10 @@ func (this *RankList) WithEncoder(enc encoders.Score) *RankList {
 	return this
 }
 
+func (this *RankList) GetEncoder() encoders.Score {
+	return this.enc
+}
+
 func (this *RankList) GetRanking(member string) (int64, error) {
 	key := this.key
 	var ranking int64 = 0
