@@ -261,3 +261,11 @@ func (this *RankList) Clone() *RankList {
 	}
 	return &cloned
 }
+
+func (this *RankList) BaseKey() string {
+	return this.baseKey
+}
+
+func (this *RankList) FullKey() string {
+	return this.key
+}
