@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/cupen/redisobj/encoders"
@@ -317,6 +318,44 @@ func TestRankList_ForEach(t *testing.T) {
 				assert.Equal(t, keys[i], k)
 				assert.Equal(t, scores[i], _realScoresM[k])
 			}
+		}
+	})
+}
+
+func TestRankList_WithCond(t *testing.T) {
+	rank := newTestObj(t, "prefiex_test_WithCond", "desc")
+	rank.Clear()
+	t.Cleanup(func() {
+		rank.Clear()
+	})
+
+	condValue := false
+	rank = rank.WithCond(func(id string) bool {
+		return condValue
+	})
+	t.Run("cond=false", func(t *testing.T) {
+		condValue = false
+		for i := 1; i <= 3; i++ {
+			id := strconv.Itoa(i)
+			_, err := rank.Set(id, float64(i), int32(i))
+			assert.Equal(t, ErrCondFalse, err)
+
+			score, err := rank.GetScore(id)
+			assert.NoError(t, err)
+			assert.Equal(t, float64(0), score)
+		}
+	})
+
+	t.Run("cond=true", func(t *testing.T) {
+		condValue = true
+		for i := 1; i <= 3; i++ {
+			id := strconv.Itoa(i)
+			_, err := rank.Set(id, float64(i), int32(i))
+			assert.NoError(t, err)
+
+			score, err := rank.GetScore(id)
+			assert.NoError(t, err)
+			assert.Equal(t, float64(i), score)
 		}
 	})
 }

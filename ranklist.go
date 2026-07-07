@@ -14,7 +14,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Dict map[string]interface{}
+var (
+	ErrCondFalse = errors.New("Condition false")
+)
+
+type (
+	Dict map[string]interface{}
+
+	// The condition determines whether to do something
+	condition func(string) bool
+)
 
 // const OrderingAsc = 0
 // const OrderingDesc = 1
@@ -33,6 +42,7 @@ type RankList struct {
 	MaxMembers int // 暂时不用
 	Order      int // 0-从高到低，1-从低到高
 	enc        encoders.Score
+	cond       condition
 }
 
 func NewRankList(redis *redis.Client, baseKey string) *RankList {
@@ -58,6 +68,12 @@ func (this *RankList) SetID(rankId string) {
 func (this *RankList) WithID(rankId string) *RankList {
 	cloned := this.Clone()
 	cloned.SetID(rankId)
+	return cloned
+}
+
+func (this *RankList) WithCond(cond condition) *RankList {
+	cloned := this.Clone()
+	cloned.cond = cond
 	return cloned
 }
 
@@ -149,6 +165,12 @@ func (this *RankList) _decodeScores(items []redis.Z) {
 }
 
 func (this *RankList) Set(member string, score float64, factor int32) (int64, error) {
+	if this.cond != nil {
+		if !this.cond(member) {
+			return 0, ErrCondFalse
+		}
+	}
+
 	if this.enc != nil {
 		if score > math.MaxInt32 {
 			slog.Error("[redisobj.RankList] Set: score too large", "score", score, "factor", factor)
