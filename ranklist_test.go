@@ -3,6 +3,7 @@ package redisobj
 import (
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/cupen/redisobj/encoders"
@@ -228,6 +229,10 @@ func TestRankList_WithEncoder(t *testing.T) {
 
 func TestRankList_WithEncoder_Mixed(t *testing.T) {
 	rank := newTestObj(t, "prefiex_test_WithEncoder", "desc")
+	rank.Clear()
+	t.Cleanup(func() {
+		rank.Clear()
+	})
 
 	enc := encoders.LastInIsBigger
 	rank = rank.WithEncoder(enc)
@@ -256,7 +261,62 @@ func TestRankList_WithEncoder_Mixed(t *testing.T) {
 		assert.Equal(t, "id3", items[3].Member)
 		assert.Equal(t, "id2", items[4].Member)
 		assert.Equal(t, "id1", items[5].Member)
-
 	}
 
+}
+
+func TestRankList_ForEach(t *testing.T) {
+	rank := newTestObj(t, "prefiex_test_ForEach", "asc")
+	rank.Clear()
+	t.Cleanup(func() {
+		rank.Clear()
+	})
+
+	keys := make([]string, 0, 100)
+	scores := make([]float64, 0, 100)
+	for i := 0; i < 100; i++ {
+		userId := fmt.Sprintf("user%03d", i)
+		rank.Set(userId, float64(i), 0)
+		keys = append(keys, userId)
+		scores = append(scores, float64(i))
+	}
+
+	t.Run("getall", func(t *testing.T) {
+		var _realKeys = make([]string, 0, 100)
+		var _realScoresM = make(map[string]float64)
+		err := rank.ForEach(func(member string, score float64) bool {
+			_realKeys = append(_realKeys, member)
+			_realScoresM[member] = score
+			return true
+		}, "*", 10000)
+
+		assert.NoError(t, err)
+		slices.Sort(_realKeys)
+		for i, k := range _realKeys {
+			assert.Equal(t, keys[i], k)
+			assert.Equal(t, scores[i], _realScoresM[k])
+		}
+	})
+
+	t.Run("stopped", func(t *testing.T) {
+		var _realKeys = make([]string, 0, 100)
+		var _realScoresM = make(map[string]float64)
+		err := rank.ForEach(func(member string, score float64) bool {
+			_realKeys = append(_realKeys, member)
+			_realScoresM[member] = score
+			if len(_realKeys) >= 50 {
+				return false
+			}
+			return true
+		}, "*", 10000)
+
+		assert.NoError(t, err)
+		slices.Sort(_realKeys)
+		if assert.Equal(t, 50, len(_realKeys)) {
+			for i, k := range _realKeys {
+				assert.Equal(t, keys[i], k)
+				assert.Equal(t, scores[i], _realScoresM[k])
+			}
+		}
+	})
 }

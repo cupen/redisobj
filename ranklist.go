@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cupen/redisobj/encoders"
 	"github.com/redis/go-redis/v9"
@@ -211,8 +213,8 @@ func (this *RankList) GetTop(count int) ([]redis.Z, error) {
 func (this *RankList) Clear() error {
 	key := this.key
 	c := context.TODO()
-	this.redis.Unlink(c, key).Result()
-	return nil
+	err := this.redis.Unlink(c, key).Err()
+	return err
 }
 
 func (this *RankList) SetMaxSize(maxSize int) {
@@ -268,4 +270,38 @@ func (this *RankList) BaseKey() string {
 
 func (this *RankList) FullKey() string {
 	return this.key
+}
+
+func (this *RankList) SetTTL(ttl time.Duration) error {
+	key := this.key
+	c := context.TODO()
+	err := this.redis.Expire(c, key, ttl).Err()
+	return err
+}
+
+func (this *RankList) ForEach(cb func(string, float64) bool, match string, count int64) error {
+	key := this.key
+	var cursor = uint64(0)
+	var isFirstLoop = true
+	for cursor > 0 || isFirstLoop {
+		isFirstLoop = false
+		c := context.TODO()
+		keys, _cursor, err := this.redis.ZScan(c, key, cursor, match, count).Result()
+		if err != nil {
+			return err
+		}
+		cursor = _cursor
+		for i := 0; i < len(keys); i += 2 {
+			member := keys[i]
+			scoreStr := keys[i+1]
+			score, err := strconv.ParseFloat(scoreStr, 64)
+			if err != nil {
+				return fmt.Errorf("invalid member: %s with score: %s", member, scoreStr)
+			}
+			if !cb(member, score) {
+				return nil
+			}
+		}
+	}
+	return nil
 }

@@ -79,16 +79,14 @@ func (this *Set) Clear() error {
 	return err
 }
 
-func (this *Set) Foreach(cb func(row string) bool) error {
-	var MAX_LOOPS = 1000 // 最多 500w 吧.
+func (this *Set) Scan(match string, count int64, cb func(string) bool) error {
 	var cursor = uint64(0)
-	for i := 0; i < MAX_LOOPS; i++ {
+	var isFirstLoop = true
+	for cursor > 0 || isFirstLoop {
+		isFirstLoop = false
 		c := context.TODO()
-		keys, _cursor, err := this.redis.SScan(c, this.key, cursor, "", 5000).Result()
+		keys, _cursor, err := this.redis.SScan(c, this.key, cursor, match, count).Result()
 		if err != nil {
-			if err == redis.Nil {
-				return nil
-			}
 			return err
 		}
 		cursor = _cursor
@@ -96,10 +94,6 @@ func (this *Set) Foreach(cb func(row string) bool) error {
 			if !cb(k) {
 				break
 			}
-		}
-		// 0 表示终止
-		if cursor == 0 {
-			return nil
 		}
 	}
 	return nil

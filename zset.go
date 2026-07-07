@@ -232,3 +232,23 @@ func (this *ZSet) WithID(id string) *ZSet {
 	cloned.key = strings.Join([]string{this.key, id}, ":")
 	return cloned
 }
+
+func (this *ZSet) Scan(match string, count int64, cb func(string) bool) error {
+	var cursor = uint64(0)
+	var isFirstLoop = true
+	for cursor > 0 || isFirstLoop {
+		isFirstLoop = false
+		c := context.TODO()
+		keys, _cursor, err := this.redis.ZScan(c, this.key, cursor, match, count).Result()
+		if err != nil {
+			return err
+		}
+		cursor = _cursor
+		for _, k := range keys {
+			if !cb(k) {
+				break
+			}
+		}
+	}
+	return nil
+}
